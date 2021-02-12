@@ -1,0 +1,19 @@
+@startuml decoder
+
+
+[*] --> Waiting
+Waiting : waiting for Start of frame
+
+Waiting       --> onFrameNormal :             StartOfFrame    / sof_handler
+onFrameNormal : Decoding th  e frame
+
+onFrameNormal --> Waiting       :             EndOfFrame      / eof_handler
+onFrameNormal --> onFrameNormal :             NormalCharacter / normal_handler 
+
+onFrameNormal --> onFrameSpecial:             EscCharacter    /esc_handler
+onFrameSpecial--> onFrameNormal :                [*]         / normal_handler
+onFrameSpecial: ignore Escape character
+
+@enduml
+
+

@@ -1,0 +1,18 @@
+@startuml encoder
+
+
+[*] --> Waiting
+Waiting : waiting for Start of frame
+
+Waiting       --> onFrameConstructor :             StartOfFrame    / sof_handler
+onFrameConstructor :   encoding  the frame
+
+onFrameConstructor --> Waiting            :        EndOfFrame      / eof_handler
+onFrameConstructor --> onFrameConstructor :        NormalCharacter / appendCharacter 
+onFrameConstructor --> onFrameConstructor :        SpecialCharacter/ appendSpecial
+
+
+
+@enduml
+
+
