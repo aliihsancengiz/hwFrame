@@ -1,6 +1,6 @@
 # FrameDecoder
 
-A variable length frame decoder is designed using boost/SML.   
+A variable length frame encoder/decoder is designed using boost/SML.   
 
 
 ## State Diagram of Decoder
