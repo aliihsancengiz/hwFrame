@@ -9,16 +9,16 @@
 #include "Events.h"
 #include "SmStorage.h"
 
+namespace sml=boost::sml;
 
 // an utility to get size of static arrays
 template<typename T,std::size_t Size>
 static constexpr std::size_t GetArrLength(T(&)[Size]) {return Size;}
 
-namespace sml=boost::sml;
 
 
 
-
+// Function Object that we pass Boost.SML to make our State Machine
 struct frameDecoderSm
 {
     auto operator()() const
@@ -43,7 +43,7 @@ struct frameDecoderSm
 };
 
 
-
+// Object that will give us decoded Frames
 struct FrameDecoder
 {
     private:
@@ -68,7 +68,10 @@ struct FrameDecoder
             else
                 fsm.process_event(NormalCharacter{currentChar});
         }
-        size_t availableFrames()const{return frameHolder.mframeQueue.size();}
+        size_t availableFrames()const
+        {
+            return frameHolder.mframeQueue.size();
+        }
         std::optional<std::vector<uint8_t>> getFrame()
         {
             if (frameHolder.mframeQueue.size()>0)

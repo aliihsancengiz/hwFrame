@@ -3,7 +3,7 @@
 
 #include <vector>
 
-// Dependencies
+// Dependencies to store frames gotted from State Machines
 struct SmStorageDependency
 {
     std::vector<uint8_t> mdataQueue;

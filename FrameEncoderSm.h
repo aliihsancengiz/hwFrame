@@ -9,7 +9,7 @@
 #include "Events.h"
 #include "SmStorage.h"
 
-
+// additional Event for encoder State machine
 struct SpecialCharacter{uint8_t ch{};};
 
 
@@ -48,7 +48,7 @@ struct frameEncoderSm
     }
 };
 
-
+// an interface to hide state transition etc..
 struct FrameEncoder
 {
     private:
@@ -81,7 +81,10 @@ struct FrameEncoder
             encoderSm.process_event(EndOfFrame{fs.EofIndicator});
         
         }
-        std::size_t availableFrames()const{return dataHolder.mframeQueue.size();}
+        std::size_t availableFrames()const
+        {
+            return dataHolder.mframeQueue.size();
+        }
         std::optional<std::vector<uint8_t>> getFrame()
         {
             if (dataHolder.mframeQueue.size()>0)
@@ -93,8 +96,6 @@ struct FrameEncoder
             return std::nullopt;
         }
 
-
 };
-
 
 #endif

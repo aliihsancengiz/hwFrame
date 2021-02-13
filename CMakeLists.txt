@@ -7,8 +7,8 @@ SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(FrameDecoder)
 
-add_executable(test main.cpp)
+add_executable(execMain main.cpp)
 
 
 set (CMAKE_CXX_FLAGS "-O2 -fno-exceptions  -pedantic -lpthread -Wall")
-target_include_directories(test PUBLIC boost)
+target_include_directories(execMain PUBLIC boost)
