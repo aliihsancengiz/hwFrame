@@ -1,14 +1,12 @@
-#ifndef _SM_STORAGE_H_
-#define _SM_STORAGE_H_
-
+#pragma once
 #include <vector>
 
 // Dependencies to store frames gotted from State Machines
+using frameType = std::vector<std::uint8_t>;
+namespace sm_storage_dep {
 struct SmStorageDependency
 {
-    std::vector<uint8_t> mdataQueue;
-    std::vector<std::vector<uint8_t>> mframeQueue;
+    frameType mdataQueue;
+    std::vector<frameType> mframeQueue;
 };
-
-
-#endif
+}  // namespace sm_storage_dep
