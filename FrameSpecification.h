@@ -1,15 +1,13 @@
-#ifndef __FRAME_SPEC_H__
-#define __FRAME_SPEC_H__
-
-
+#pragma once
 // Specify custom frame layout
+namespace frame_specification {
 struct FrameSpecification
 {
-    uint8_t SofIndicator=0x12,EofIndicator=0x13,ESCIndicator=0x14;
-    FrameSpecification()=default;
-    FrameSpecification(uint8_t sof_,uint8_t eof_,uint8_t esc_):SofIndicator(sof_),EofIndicator(eof_){}
+    static uint8_t SofIndicator, EofIndicator, ESCIndicator;
+    FrameSpecification() = default;
 };
+uint8_t FrameSpecification::SofIndicator = 0x12;
+uint8_t FrameSpecification::EofIndicator = 0x13;
+uint8_t FrameSpecification::ESCIndicator = 0x14;
 
-
-
-#endif
+}  // namespace frame_specification

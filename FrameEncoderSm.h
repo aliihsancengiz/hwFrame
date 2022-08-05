@@ -1,101 +1,87 @@
-#ifndef __FRAME_ENCODER_H__
-#define __FRAME_ENCODER_H__
+#pragma once
+#include "Events.h"
+#include "FrameSpecification.h"
+#include "SmStorage.h"
+#include "sml.hpp"
 
-#include "boost/sml.hpp"
 #include <iostream>
 #include <optional>
 
-#include "FrameSpecification.h"
-#include "Events.h"
-#include "SmStorage.h"
-
-// additional Event for encoder State machine
-struct SpecialCharacter{uint8_t ch{};};
-
-
 struct frameEncoderSm
-{ 
-    auto operator()()const
+{
+    auto operator()() const
     {
-        static constexpr auto sof_handler=[](const auto& event,SmStorageDependency& dc)
-        {
+        static constexpr auto sof_handler = [](const auto& event,
+                                               sm_storage_dep::SmStorageDependency& dc) {
             dc.mdataQueue.clear();
             dc.mdataQueue.push_back(event.ch);
         };
-        static  auto eof_handler=[](const auto& event,SmStorageDependency& dc)
-        {
+        static auto eof_handler = [](const auto& event, sm_storage_dep::SmStorageDependency& dc) {
             dc.mdataQueue.push_back(event.ch);
             dc.mframeQueue.push_back(dc.mdataQueue);
+            // Signal onEncodedFrame
             dc.mdataQueue.clear();
-
         };
-        static constexpr auto appendCharacter=[](const auto& event,SmStorageDependency& dc)
-        {
+        static constexpr auto appendCharacter = [](const auto& event,
+                                                   sm_storage_dep::SmStorageDependency& dc) {
             dc.mdataQueue.push_back(event.ch);
         };
-        static  auto appendSpecial=[this](const auto& event,SmStorageDependency& dc)
-        {
-            dc.mdataQueue.push_back(0x14);
+        static auto appendSpecial = [this](const auto& event,
+                                           sm_storage_dep::SmStorageDependency& dc) {
+            dc.mdataQueue.push_back(frame_specification::FrameSpecification::ESCIndicator);
             dc.mdataQueue.push_back(event.ch);
         };
         using namespace sml;
+        // clang-format off
         return make_transition_table(
-            *"waiting"_s           + event<StartOfFrame>       / sof_handler     = "onFrameConstructor"_s,
-            "onFrameConstructor"_s + event<NormalCharacter>    / appendCharacter = "onFrameConstructor"_s,
-            "onFrameConstructor"_s + event<SpecialCharacter>   / appendSpecial   = "onFrameConstructor"_s,
-            "onFrameConstructor"_s + event<EndOfFrame>         / eof_handler    = "waiting"_s
-        );
+            *"waiting"_s + event<frame_events::StartOfFrame> / sof_handler = "onFrameConstructor"_s,
+            "onFrameConstructor"_s + event<frame_events::NormalCharacter> / appendCharacter = "onFrameConstructor"_s,
+            "onFrameConstructor"_s + event<frame_events::EscCharacter> / appendSpecial = "onFrameConstructor"_s,
+            "onFrameConstructor"_s + event<frame_events::EndOfFrame> / eof_handler = "waiting"_s);
+        // clang-format on
     }
 };
 
 // an interface to hide state transition etc..
 struct FrameEncoder
 {
-    private:
-        SmStorageDependency dataHolder;
-        sml::sm<frameEncoderSm> encoderSm{dataHolder};
-        FrameSpecification fs;
-    public:
-        FrameEncoder()=default;
-        FrameEncoder(FrameSpecification& _fs):fs(_fs)
-        {
+  private:
+    sm_storage_dep::SmStorageDependency dataHolder;
+    sml::sm<frameEncoderSm> encoderSm{dataHolder};
 
-        }
-        void pushEncoder(uint8_t buffer[],uint32_t size)
-        {
-            using namespace sml;
-            encoderSm.process_event(StartOfFrame{fs.SofIndicator});
-            for (size_t i = 0; i < size; i++)
-            {
-                auto currentChar=buffer[i];
-                if(currentChar==fs.SofIndicator)
-                    encoderSm.process_event(SpecialCharacter{currentChar});
-                else if(currentChar==fs.EofIndicator)
-                    encoderSm.process_event(SpecialCharacter{currentChar});
-                else if(currentChar==fs.ESCIndicator)
-                    encoderSm.process_event(SpecialCharacter{currentChar});
-                else
-                    encoderSm.process_event(NormalCharacter{currentChar});
-                
-            }
-            encoderSm.process_event(EndOfFrame{fs.EofIndicator});
-        
-        }
-        std::size_t availableFrames()const
-        {
-            return dataHolder.mframeQueue.size();
-        }
-        std::optional<std::vector<uint8_t>> getFrame()
-        {
-            if (dataHolder.mframeQueue.size()>0)
-            {
-                auto availableframe= dataHolder.mframeQueue.front();
-                dataHolder.mframeQueue.erase(dataHolder.mframeQueue.begin());
-                return availableframe;
-            }
-            return std::nullopt;
-        }
+  public:
+    FrameEncoder() = default;
 
+    void pushEncoder(uint8_t buffer[], uint32_t size)
+    {
+        using namespace sml;
+        encoderSm.process_event(
+          frame_events::StartOfFrame{frame_specification::FrameSpecification::SofIndicator});
+        for (size_t i = 0; i < size; i++) {
+            auto currentChar = buffer[i];
+
+            if (currentChar != frame_specification::FrameSpecification::SofIndicator &&
+                currentChar != frame_specification::FrameSpecification::EofIndicator &&
+                currentChar != frame_specification::FrameSpecification::ESCIndicator) {
+                encoderSm.process_event(frame_events::NormalCharacter{currentChar});
+            } else {
+                encoderSm.process_event(frame_events::EscCharacter{currentChar});
+            }
+        }
+        encoderSm.process_event(
+          frame_events::EndOfFrame{frame_specification::FrameSpecification::EofIndicator});
+    }
+    std::size_t availableFrames() const
+    {
+        return dataHolder.mframeQueue.size();
+    }
+    std::optional<std::vector<uint8_t>> getFrame()
+    {
+        if (dataHolder.mframeQueue.size() > 0) {
+            auto availableframe = dataHolder.mframeQueue.front();
+            dataHolder.mframeQueue.erase(dataHolder.mframeQueue.begin());
+            return availableframe;
+        }
+        return std::nullopt;
+    }
 };
-
-#endif
