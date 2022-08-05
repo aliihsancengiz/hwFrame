@@ -1,5 +1,5 @@
-#include "FrameDecoderSm.h"
-#include "FrameEncoderSm.h"
+#include "Framer.hpp"
+
 constexpr auto print_frame = [](auto& frame) {
     for (auto e : frame) {
         std::cout << std::hex << static_cast<int>(e) << " ";
@@ -7,57 +7,39 @@ constexpr auto print_frame = [](auto& frame) {
     std::cout << "\n";
 };
 
-enum class PushType
+struct FramedSocket : framer::Framer
 {
-    ENCODER,
-    DECODER
-};
+    FramedSocket() {}
 
-struct Framer
-{
-    Framer()
+    void writeFrame(frameType f)
     {
-        event_bus::EventBus::getInstance().registerEvent<frame_events::GotEncodedFrame>(
-          std::bind(&Framer::onEncodedFrame, this, std::placeholders::_1));
-
-        event_bus::EventBus::getInstance().registerEvent<frame_events::GotDecodedFrame>(
-          std::bind(&Framer::onDecodedFrame, this, std::placeholders::_1));
+        pushData(f, framer::PushType::ENCODER);
+    }
+    void receiveFrame(frameType f)
+    {
+        pushData(f, framer::PushType::DECODER);
     }
 
-  private:
-    FrameEncoder encoder;
-    FrameDecoder decoder;
-    void onDecodedFrame(frame_events::GotDecodedFrame frame)
+  protected:
+    void onDecodedFrame(frame_events::GotDecodedFrame frame) override
     {
         std::cout << "Got Decoded Frame " << std::endl;
         print_frame(frame.data);
     }
-    void onEncodedFrame(frame_events::GotEncodedFrame frame)
+    void onEncodedFrame(frame_events::GotEncodedFrame frame) override
     {
-        std::cout << "Got Encoded Frame " << std::endl;
+        std::cout << "Got Encoded Frame ,Send data to lower layer." << std::endl;
         print_frame(frame.data);
-        pushData(frame.data, PushType::DECODER);
-    }
-
-  public:
-    void pushData(frameType frame, PushType type)
-    {
-        if (type == PushType::ENCODER) {
-            encoder.pushEncoder(frame.data(), frame.size());
-        } else if (type == PushType::DECODER) {
-            decoder.pushToDecoder(frame.data(), frame.size());
-        }
+        pushData(frame.data, framer::PushType::DECODER);
     }
 };
 
 int main()
 {
 
-    Framer f;
+    FramedSocket s;
     frameType ff{0x61, 0x62, 0x12, 0x13, 0x14, 0x63, 0x64, 0x65};
-    std::cout << "Raw Frame" << std::endl;
-    print_frame(ff);
-    f.pushData(ff, PushType::ENCODER);
+    s.writeFrame(ff);
 
     return 0;
 }
