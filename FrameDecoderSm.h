@@ -1,4 +1,5 @@
 #pragma once
+#include "EventBus.hpp"
 #include "Events.h"
 #include "FrameSpecification.h"
 #include "SmStorage.h"
@@ -28,6 +29,8 @@ struct frameDecoderSm
         static constexpr auto eof_handler = [](sm_storage_dep::SmStorageDependency& dc) {
             dc.mframeQueue.push_back(dc.mdataQueue);
             // Signal onDecodedFrame
+            event_bus::EventBus::getInstance().fireEvent(
+              frame_events::GotDecodedFrame{dc.mdataQueue});
             dc.mdataQueue.clear();
         };
         static constexpr auto esc_handler = []() {};

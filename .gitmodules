@@ -1,3 +1,6 @@
 [submodule "sml"]
 	path = sml
 	url = https://github.com/boost-ext/sml
+[submodule "eventbus"]
+	path = eventbus
+	url = git@github.com:aliihsancengiz/event-bus.git

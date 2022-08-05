@@ -9,3 +9,4 @@ add_executable(execMain main.cpp)
 
 set(CMAKE_CXX_FLAGS "-O2 -fno-exceptions  -pedantic -lpthread -Wall")
 target_include_directories(execMain PUBLIC sml/include/boost)
+target_include_directories(execMain PUBLIC eventbus/EventBus)

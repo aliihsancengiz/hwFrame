@@ -20,6 +20,8 @@ struct frameEncoderSm
             dc.mdataQueue.push_back(event.ch);
             dc.mframeQueue.push_back(dc.mdataQueue);
             // Signal onEncodedFrame
+            event_bus::EventBus::getInstance().fireEvent(
+              frame_events::GotEncodedFrame{dc.mdataQueue});
             dc.mdataQueue.clear();
         };
         static constexpr auto appendCharacter = [](const auto& event,

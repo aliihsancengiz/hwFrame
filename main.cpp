@@ -1,6 +1,5 @@
 #include "FrameDecoderSm.h"
 #include "FrameEncoderSm.h"
-
 constexpr auto print_frame = [](auto& frame) {
     for (auto e : frame) {
         std::cout << std::hex << static_cast<int>(e) << " ";
@@ -16,14 +15,31 @@ enum class PushType
 
 struct Framer
 {
-    void onDecodedFrame(frameType frame) {}
-    void onEncodedFrame(frameType frame) {}
+    Framer()
+    {
+        event_bus::EventBus::getInstance().registerEvent<frame_events::GotEncodedFrame>(
+          std::bind(&Framer::onEncodedFrame, this, std::placeholders::_1));
+
+        event_bus::EventBus::getInstance().registerEvent<frame_events::GotDecodedFrame>(
+          std::bind(&Framer::onDecodedFrame, this, std::placeholders::_1));
+    }
 
   private:
     FrameEncoder encoder;
     FrameDecoder decoder;
+    void onDecodedFrame(frame_events::GotDecodedFrame frame)
+    {
+        std::cout << "Got Decoded Frame " << std::endl;
+        print_frame(frame.data);
+    }
+    void onEncodedFrame(frame_events::GotEncodedFrame frame)
+    {
+        std::cout << "Got Encoded Frame " << std::endl;
+        print_frame(frame.data);
+        pushData(frame.data, PushType::DECODER);
+    }
 
-  protected:
+  public:
     void pushData(frameType frame, PushType type)
     {
         if (type == PushType::ENCODER) {
@@ -36,26 +52,12 @@ struct Framer
 
 int main()
 {
-    FrameEncoder encoder;
-    FrameDecoder decoder;
-    uint8_t buffer[] = {0x61, 0x62, 0x12, 0x13, 0x14, 0x63, 0x64, 0x65};
-    std::cout << "Actual Frame   : ";
-    for (size_t i = 0; i < GetArrLength(buffer); i++) {
-        std::cout << std::hex << static_cast<int>(buffer[i]) << " ";
-    }
-    std::cout << "\n";
-    encoder.pushEncoder(buffer, GetArrLength(buffer));
-    auto encodedframe = encoder.getFrame().value();
 
-    std::cout << "Encoded Frame  : ";
-    print_frame(encodedframe);
-
-    decoder.pushToDecoder(encodedframe.data(), encodedframe.size());
-
-    auto decodedframe = decoder.getFrame().value();
-
-    std::cout << "Decoded Frame  : ";
-    print_frame(decodedframe);
+    Framer f;
+    frameType ff{0x61, 0x62, 0x12, 0x13, 0x14, 0x63, 0x64, 0x65};
+    std::cout << "Raw Frame" << std::endl;
+    print_frame(ff);
+    f.pushData(ff, PushType::ENCODER);
 
     return 0;
 }
