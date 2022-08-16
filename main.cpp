@@ -1,4 +1,11 @@
-#include "Framer.hpp"
+#include "Session.hpp"
+
+#define BOOST_NO_EXCEPTIONS
+#include <boost/throw_exception.hpp>
+void boost::throw_exception(std::exception const& e)
+{
+    // do nothing
+}
 
 constexpr auto print_frame = [](auto& frame) {
     for (auto e : frame) {
@@ -7,39 +14,57 @@ constexpr auto print_frame = [](auto& frame) {
     std::cout << "\n";
 };
 
-struct FramedSocket : framer::Framer
+class server
 {
-    FramedSocket() {}
+  public:
+    server(boost::asio::io_context& io_context, short port)
+        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port))
+    {
+        do_accept();
+    }
+    void loop()
+    {
+        for (size_t i = 0; i < mSessionList.size(); i++) {
+            auto v = mSessionList[i]->readFrame();
+            if (v.has_value()) {
+                std::cout << "Hello2\n";
 
-    void writeFrame(frameType f)
-    {
-        pushData(f, framer::PushType::ENCODER);
-    }
-    void receiveFrame(frameType f)
-    {
-        pushData(f, framer::PushType::DECODER);
+                print_frame(v.value());
+                mSessionList[i]->writeFrame(v.value());
+            }
+        }
     }
 
-  protected:
-    void onDecodedFrame(frame_events::GotDecodedFrame frame) override
+  private:
+    std::vector<std::shared_ptr<Session>> mSessionList;
+    void do_accept()
     {
-        std::cout << "Got Decoded Frame " << std::endl;
-        print_frame(frame.data);
+        acceptor_.async_accept([this](boost::system::error_code ec, tcp::socket socket) {
+            if (!ec) {
+                std::cout << "Hello\n";
+                auto ss = std::make_shared<Session>(std::move(socket));
+                ss->start();
+                mSessionList.push_back(ss);
+            }
+            do_accept();
+        });
     }
-    void onEncodedFrame(frame_events::GotEncodedFrame frame) override
-    {
-        std::cout << "Got Encoded Frame ,Send data to lower layer." << std::endl;
-        print_frame(frame.data);
-        pushData(frame.data, framer::PushType::DECODER);
-    }
+
+    tcp::acceptor acceptor_;
 };
 
 int main()
 {
+    boost::asio::io_context io_context;
+    server s(io_context, 8888);
+    std::thread ctxThread([&io_context]() {
+        io_context.run();
+    });
 
-    FramedSocket s;
-    frameType ff{0x61, 0x62, 0x12, 0x13, 0x14, 0x63, 0x64, 0x65};
-    s.writeFrame(ff);
+    while (true) {
+        s.loop();
+    }
 
+    ctxThread.join();
     return 0;
 }
